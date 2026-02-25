@@ -1,5 +1,5 @@
 """
-config.py — Environment variables and constants for SkyReader.
+config.py — Environment variables and constants for AirReader.
 """
 
 import os

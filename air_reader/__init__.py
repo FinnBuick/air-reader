@@ -1,1 +1,1 @@
-# SkyReader — WhatsApp Web Content Proxy
+# AirReader — WhatsApp Web Content Proxy

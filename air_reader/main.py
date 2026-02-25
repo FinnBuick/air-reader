@@ -24,7 +24,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-HELP_TEXT = """📖 SkyReader commands:
+HELP_TEXT = """📖 AirReader commands:
 
 url: <link>     — Fetch full article
 read: <link>    — Alias for url:
@@ -41,12 +41,12 @@ Tip: You can also paste a bare URL and I'll fetch it automatically."""
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     cache.init_db()
-    logger.info("SkyReader started. Cache DB: %s", config.CACHE_DB_PATH)
+    logger.info("AirReader started. Cache DB: %s", config.CACHE_DB_PATH)
     yield
-    logger.info("SkyReader shutting down.")
+    logger.info("AirReader shutting down.")
 
 
-app = FastAPI(title="SkyReader", lifespan=lifespan)
+app = FastAPI(title="AirReader", lifespan=lifespan)
 
 
 # ---------------------------------------------------------------------------
