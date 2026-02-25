@@ -1,0 +1,35 @@
+services:
+  skyreader:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - skyreader_data:/app/data
+    environment:
+      - CACHE_DB_PATH=/app/data/skyreader_cache.db
+    restart: unless-stopped
+    depends_on:
+      searxng:
+        condition: service_healthy
+        required: false
+
+  # Optional: self-hosted search (set SEARCH_BACKEND=searxng in .env to use)
+  searxng:
+    image: searxng/searxng:latest
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./searxng:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://searxng:8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  skyreader_data:
