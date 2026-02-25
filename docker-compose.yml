@@ -1,14 +1,14 @@
 services:
-  skyreader:
+  air-reader:
     build: .
     ports:
       - "8080:8080"
     env_file:
       - .env
     volumes:
-      - skyreader_data:/app/data
+      - air_reader_data:/app/data
     environment:
-      - CACHE_DB_PATH=/app/data/skyreader_cache.db
+      - CACHE_DB_PATH=/app/data/air_reader_cache.db
     restart: unless-stopped
     depends_on:
       searxng:
@@ -32,4 +32,4 @@ services:
       retries: 3
 
 volumes:
-  skyreader_data:
+  air_reader_data:

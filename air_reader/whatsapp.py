@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from skyreader import config
+from air_reader import config
 
 logger = logging.getLogger(__name__)
 

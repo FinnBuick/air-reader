@@ -15,7 +15,7 @@ import trafilatura
 import trafilatura.settings
 import trafilatura.utils
 
-from skyreader import cache, config
+from air_reader import cache, config
 
 logger = logging.getLogger(__name__)
 

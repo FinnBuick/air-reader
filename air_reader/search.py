@@ -14,7 +14,7 @@ from typing import Optional
 
 import httpx
 
-from skyreader import config
+from air_reader import config
 
 logger = logging.getLogger(__name__)
 

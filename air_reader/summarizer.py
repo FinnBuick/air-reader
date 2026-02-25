@@ -8,7 +8,7 @@ from typing import Optional
 
 import anthropic
 
-from skyreader import config
+from air_reader import config
 
 _LENGTH_GUIDANCE = {
     "short": "3-5 sentences",

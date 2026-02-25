@@ -11,12 +11,12 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
-from skyreader import cache, config, whatsapp
-from skyreader.chunker import build_chunks
-from skyreader.fetcher import Article, FetchError, fetch
-from skyreader.parser import Command, parse
-from skyreader.search import format_results, search
-from skyreader.summarizer import summarize
+from air_reader import cache, config, whatsapp
+from air_reader.chunker import build_chunks
+from air_reader.fetcher import Article, FetchError, fetch
+from air_reader.parser import Command, parse
+from air_reader.search import format_results, search
+from air_reader.summarizer import summarize
 
 logging.basicConfig(
     level=logging.INFO,

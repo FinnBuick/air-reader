@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from skyreader import config
+from air_reader import config
 
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 

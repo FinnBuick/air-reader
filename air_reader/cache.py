@@ -12,7 +12,7 @@ from contextlib import contextmanager
 from typing import Optional
 from dataclasses import dataclass
 
-from skyreader import config
+from air_reader import config
 
 
 @dataclass

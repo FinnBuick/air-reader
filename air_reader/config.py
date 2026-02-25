@@ -29,7 +29,7 @@ GOOGLE_CSE_CX: str = os.environ.get("GOOGLE_CSE_CX", "")
 SEARXNG_URL: str = os.environ.get("SEARXNG_URL", "http://localhost:8888")
 
 # Caching
-CACHE_DB_PATH: str = os.environ.get("CACHE_DB_PATH", "skyreader_cache.db")
+CACHE_DB_PATH: str = os.environ.get("CACHE_DB_PATH", "air_reader_cache.db")
 CACHE_TTL_SECONDS: int = int(os.environ.get("CACHE_TTL_SECONDS", str(24 * 3600)))  # 24 h
 
 # Content extraction
