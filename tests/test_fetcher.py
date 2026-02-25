@@ -1,19 +1,28 @@
 """Tests for air_reader.fetcher — URL validation & SSRF protection."""
 
+import socket
+
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
 
 from air_reader.fetcher import fetch, FetchError, validate_url, Article
 
 
+def _fake_getaddrinfo_public(host, port, *args, **kwargs):
+    """Pretend every hostname resolves to a public IP."""
+    return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
+
+
 class TestValidateUrl:
     """Test SSRF protection (review issue #2)."""
 
     def test_allows_https(self):
-        assert validate_url("https://example.com/article") == "https://example.com/article"
+        with patch("air_reader.fetcher.socket.getaddrinfo", _fake_getaddrinfo_public):
+            assert validate_url("https://example.com/article") == "https://example.com/article"
 
     def test_allows_http(self):
-        assert validate_url("http://example.com/article") == "http://example.com/article"
+        with patch("air_reader.fetcher.socket.getaddrinfo", _fake_getaddrinfo_public):
+            assert validate_url("http://example.com/article") == "http://example.com/article"
 
     def test_rejects_file_scheme(self):
         with pytest.raises(FetchError, match="scheme"):
@@ -55,6 +64,15 @@ class TestValidateUrl:
         with pytest.raises(FetchError):
             validate_url("http://")
 
+    def test_rejects_dns_resolving_to_private(self):
+        """A hostname that resolves to a private IP should still be blocked."""
+        def _resolve_to_private(host, port, *a, **kw):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.1", 0))]
+
+        with patch("air_reader.fetcher.socket.getaddrinfo", _resolve_to_private):
+            with pytest.raises(FetchError, match="private"):
+                validate_url("http://evil.example.com/admin")
+
 
 class TestFetch:
     @pytest.mark.asyncio
@@ -62,7 +80,8 @@ class TestFetch:
         from air_reader import cache
         cache.put(url="https://example.com", text="cached text", title="Cached")
 
-        article = await fetch("https://example.com")
+        with patch("air_reader.fetcher.socket.getaddrinfo", _fake_getaddrinfo_public):
+            article = await fetch("https://example.com")
         assert article.from_cache is True
         assert article.text == "cached text"
 
@@ -76,7 +95,8 @@ class TestFetch:
         html = "<html><body><p>Article body content here that is long enough.</p></body></html>"
         extracted = "Article body content here that is long enough." + " More." * 50
 
-        with patch("air_reader.fetcher._fetch_trafilatura", return_value=html), \
+        with patch("air_reader.fetcher.socket.getaddrinfo", _fake_getaddrinfo_public), \
+             patch("air_reader.fetcher._fetch_trafilatura", return_value=html), \
              patch("air_reader.fetcher._extract", return_value=extracted), \
              patch("air_reader.fetcher._extract_metadata", return_value=None):
             article = await fetch("https://example.com/article")

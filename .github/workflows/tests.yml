@@ -1,0 +1,36 @@
+name: Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-asyncio
+
+      - name: Run tests
+        env:
+          WHATSAPP_TOKEN: test
+          WHATSAPP_PHONE_NUMBER_ID: "123456"
+          WHATSAPP_VERIFY_TOKEN: test
+          WHATSAPP_APP_SECRET: test
+          ANTHROPIC_API_KEY: sk-ant-test
+          SEARCH_BACKEND: google
+          GOOGLE_CSE_KEY: test
+          GOOGLE_CSE_CX: test
+        run: python -m pytest tests/ -v
