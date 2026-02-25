@@ -12,7 +12,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright browsers (Chromium only — ~130 MB)
-RUN playwright install chromium --with-deps
+# apt-get update is required here because the lists were cleaned in the previous layer
+RUN apt-get update && playwright install chromium --with-deps && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
