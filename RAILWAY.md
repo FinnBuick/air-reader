@@ -35,46 +35,122 @@ Railway deploys directly from a GitHub repository.
 
 ---
 
-## Step 3 — Configure environment variables
+## Step 3 — Gather your credentials
 
-In the Railway dashboard, open your service and go to **Variables**. Add each of the following:
+Before entering anything in Railway, collect the values below. Each subsection explains exactly where to find them.
 
-### Required
+---
 
-| Variable | Description |
-|---|---|
-| `WHATSAPP_TOKEN` | Meta System User access token |
-| `WHATSAPP_PHONE_NUMBER_ID` | Phone number ID from your WhatsApp app |
-| `WHATSAPP_VERIFY_TOKEN` | A random secret string you choose — used to verify the webhook with Meta |
-| `WHATSAPP_APP_SECRET` | App secret from your Meta app's **Settings → Basic** page |
-| `ANTHROPIC_API_KEY` | Your Anthropic API key (`sk-ant-...`) |
-| `ALLOWED_SENDER` | Your WhatsApp number in E.164 format **without** the leading `+`, e.g. `12125551234` |
+### 3a — WhatsApp Cloud API credentials
 
-### Search (choose one)
+You need a Meta Developer account with a WhatsApp Cloud API app. If you have not set one up yet:
 
-**Google Custom Search** (default):
+1. Go to [developers.facebook.com](https://developers.facebook.com) and log in.
+2. Click **My Apps → Create App**.
+3. Choose **Business** as the app type and follow the prompts.
+4. Once the app is created, click **Add Product** and add **WhatsApp**.
 
-| Variable | Description |
-|---|---|
-| `SEARCH_BACKEND` | Set to `google` |
-| `GOOGLE_CSE_KEY` | Google API key |
-| `GOOGLE_CSE_CX` | Custom Search Engine ID |
+**`WHATSAPP_PHONE_NUMBER_ID`**
 
-**Self-hosted SearXNG** (advanced — requires a separate SearXNG service):
+1. In your app dashboard, go to **WhatsApp → API Setup**.
+2. Under **Send and receive messages**, find the **Phone number ID** field (a long numeric string).
+3. Copy that value.
 
-| Variable | Description |
-|---|---|
-| `SEARCH_BACKEND` | Set to `searxng` |
-| `SEARXNG_URL` | Internal URL of your SearXNG service, e.g. `http://searxng.railway.internal:8080` |
+**`WHATSAPP_TOKEN`**
 
-### Optional
+This is a System User access token with `whatsapp_business_messaging` permission.
 
-| Variable | Default | Description |
+_Temporary token (fine for testing):_
+1. On the same **WhatsApp → API Setup** page, under **Temporary access token**, click **Copy**. This token expires after 24 hours.
+
+_Permanent token (recommended for production):_
+1. Go to [business.facebook.com](https://business.facebook.com) → **Settings → Users → System Users**.
+2. Create or select a System User, assign it the **Admin** role for your WhatsApp Business Account.
+3. Click **Generate New Token**, select your app, and add the `whatsapp_business_messaging` permission.
+4. Copy the generated token — it does not expire.
+
+**`WHATSAPP_APP_SECRET`**
+
+1. In your app dashboard, go to **Settings → Basic**.
+2. Click **Show** next to **App Secret** and copy the value.
+
+**`WHATSAPP_VERIFY_TOKEN`**
+
+This is a value **you invent** — it is a shared secret between your app and Meta used only to confirm that webhook challenge requests come from Meta.
+
+- Choose any random string, e.g. `my-secret-verify-token-123`.
+- Save it somewhere; you will paste it into both Railway Variables and the Meta webhook configuration.
+
+---
+
+### 3b — Anthropic API key
+
+**`ANTHROPIC_API_KEY`**
+
+1. Go to [console.anthropic.com](https://console.anthropic.com) and sign in.
+2. Navigate to **API Keys** in the left sidebar.
+3. Click **Create Key**, give it a name, and copy the key (`sk-ant-...`).
+
+> **Billing note:** You need to add a payment method under **Plans & Billing** before the key will work.
+
+---
+
+### 3c — Allowed sender
+
+**`ALLOWED_SENDER`**
+
+This is the phone number that is permitted to send commands to the bot. Only messages from this number will be processed.
+
+- Use E.164 format **without** the leading `+`.
+- Example: if your number is `+1 (212) 555-1234`, set the value to `12125551234`.
+
+---
+
+### 3d — Search credentials (choose one backend)
+
+**Option A — Google Custom Search** (default, easiest)
+
+`GOOGLE_CSE_KEY` — a Google Cloud API key:
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create or select a project.
+2. Navigate to **APIs & Services → Library** and enable **Custom Search API**.
+3. Go to **APIs & Services → Credentials**, click **Create Credentials → API Key**, and copy the key.
+
+`GOOGLE_CSE_CX` — a Custom Search Engine ID:
+1. Go to [programmablesearchengine.google.com](https://programmablesearchengine.google.com).
+2. Click **Add**, give the engine a name, choose **Search the entire web**, and click **Create**.
+3. Open the engine, go to **Overview**, and copy the **Search engine ID**.
+
+Set `SEARCH_BACKEND=google`.
+
+**Option B — Self-hosted SearXNG** (advanced)
+
+Deploy a SearXNG instance as a second Railway service (or elsewhere), then set:
+- `SEARCH_BACKEND=searxng`
+- `SEARXNG_URL` to its internal URL, e.g. `http://searxng.railway.internal:8080`
+
+---
+
+### 3e — Enter the variables in Railway
+
+1. In your Railway project, click the service, then open the **Variables** tab.
+2. Add each variable from the table below:
+
+| Variable | Required | Value |
 |---|---|---|
-| `CACHE_DB_PATH` | `air_reader_cache.db` | Path to the SQLite cache file. Set to `/data/air_reader_cache.db` if you add a persistent volume (recommended). |
-| `CACHE_TTL_SECONDS` | `86400` | How long to cache fetched pages, in seconds (default 24 h). |
+| `WHATSAPP_TOKEN` | Yes | System User access token |
+| `WHATSAPP_PHONE_NUMBER_ID` | Yes | Numeric ID from WhatsApp API Setup |
+| `WHATSAPP_VERIFY_TOKEN` | Yes | Random string you chose |
+| `WHATSAPP_APP_SECRET` | Yes | From Meta app Settings → Basic |
+| `ANTHROPIC_API_KEY` | Yes | `sk-ant-...` from Anthropic Console |
+| `ALLOWED_SENDER` | Yes | Your number, digits only, no `+` |
+| `SEARCH_BACKEND` | Yes | `google` or `searxng` |
+| `GOOGLE_CSE_KEY` | If using Google | Google Cloud API key |
+| `GOOGLE_CSE_CX` | If using Google | Custom Search Engine ID |
+| `SEARXNG_URL` | If using SearXNG | Internal URL of SearXNG service |
+| `CACHE_DB_PATH` | No | `/data/air_reader_cache.db` (if using a volume) |
+| `CACHE_TTL_SECONDS` | No | Seconds to cache pages, default `86400` (24 h) |
 
-Railway automatically injects a `PORT` environment variable; the start command in `railway.toml` uses it, so you do not need to set `PORT` yourself.
+Railway automatically injects a `PORT` variable; the `railway.toml` start command uses it, so you do not need to set it yourself.
 
 ---
 
