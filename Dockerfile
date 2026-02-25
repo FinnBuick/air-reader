@@ -1,19 +1,12 @@
-FROM python:3.11-slim
-
-# System dependencies for Playwright + trafilatura
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        curl \
-        ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+FROM mcr.microsoft.com/playwright/python:v1.49.0-noble
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install Playwright browsers (Chromium only — ~130 MB)
-# apt-get update is required here because the lists were cleaned in the previous layer
-RUN apt-get update && playwright install chromium --with-deps && rm -rf /var/lib/apt/lists/*
+# Install Playwright browsers (system deps already present in the base image)
+RUN playwright install chromium
 
 COPY . .
 
