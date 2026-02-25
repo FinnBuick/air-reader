@@ -1,5 +1,7 @@
 """
-summarizer.py — Claude API summarization (invoked only for `sum:` commands).
+summarizer.py — Claude API summarization (invoked only for ``sum:`` commands).
+
+Uses the async Anthropic client so the FastAPI event loop is never blocked.
 """
 
 from __future__ import annotations
@@ -16,17 +18,17 @@ _LENGTH_GUIDANCE = {
     "long": "roughly half the original length",
 }
 
-_client: Optional[anthropic.Anthropic] = None
+_client: Optional[anthropic.AsyncAnthropic] = None
 
 
-def _get_client() -> anthropic.Anthropic:
+def _get_client() -> anthropic.AsyncAnthropic:
     global _client
     if _client is None:
-        _client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        _client = anthropic.AsyncAnthropic(api_key=config.ANTHROPIC_API_KEY)
     return _client
 
 
-def summarize(
+async def summarize(
     text: str,
     title: Optional[str] = None,
     length: str = "medium",
@@ -56,7 +58,7 @@ def summarize(
     )
 
     client = _get_client()
-    response = client.messages.create(
+    response = await client.messages.create(
         model=config.SUMMARISE_MODEL,
         max_tokens=config.SUMMARISE_MAX_TOKENS,
         messages=[{"role": "user", "content": prompt}],
