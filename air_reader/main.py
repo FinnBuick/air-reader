@@ -4,6 +4,8 @@ main.py — FastAPI application: WhatsApp webhook endpoint and request dispatche
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
 from contextlib import asynccontextmanager
 from typing import Any
@@ -40,13 +42,33 @@ Tip: You can also paste a bare URL and I'll fetch it automatically."""
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    config.validate()
     cache.init_db()
+    cache.purge_expired()
     logger.info("AirReader started. Cache DB: %s", config.CACHE_DB_PATH)
     yield
     logger.info("AirReader shutting down.")
 
 
 app = FastAPI(title="AirReader", lifespan=lifespan)
+
+
+# ---------------------------------------------------------------------------
+# Webhook signature verification
+# ---------------------------------------------------------------------------
+
+def _verify_signature(body: bytes, signature_header: str | None) -> bool:
+    """Verify the X-Hub-Signature-256 header against the raw request body."""
+    if not config.WHATSAPP_APP_SECRET:
+        # If no secret is configured, skip verification (dev mode)
+        return True
+    if not signature_header:
+        return False
+    expected = hmac.new(
+        config.WHATSAPP_APP_SECRET.encode(), body, hashlib.sha256
+    ).hexdigest()
+    provided = signature_header.removeprefix("sha256=")
+    return hmac.compare_digest(expected, provided)
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +93,13 @@ async def verify_webhook(
 
 @app.post("/webhook")
 async def receive_webhook(request: Request):
+    body = await request.body()
+    sig = request.headers.get("X-Hub-Signature-256")
+
+    if not _verify_signature(body, sig):
+        logger.warning("Webhook signature verification failed")
+        raise HTTPException(status_code=403, detail="Invalid signature")
+
     payload: dict[str, Any] = await request.json()
     messages = whatsapp.extract_inbound(payload)
 
@@ -145,7 +174,7 @@ async def _handle_fetch(
     if summarize_length:
         # Summarization path
         await whatsapp.send_text(sender, "✍️ Summarizing…")
-        summary = summarize(
+        summary = await summarize(
             text=article.text,
             title=article.title,
             length=summarize_length,
@@ -182,6 +211,6 @@ async def _handle_search(sender: str, query: str | None) -> None:
         await whatsapp.send_text(sender, "❌ Please provide a search query after `search:`.")
         return
 
-    await whatsapp.send_text(sender, f"🔍 Searching for "{query}"…")
+    await whatsapp.send_text(sender, f"🔍 Searching for \u201c{query}\u201d\u2026")
     results = await search(query)
     await whatsapp.send_text(sender, format_results(query, results))

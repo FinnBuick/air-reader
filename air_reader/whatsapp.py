@@ -13,10 +13,13 @@ from air_reader import config
 
 logger = logging.getLogger(__name__)
 
-_HEADERS = {
-    "Authorization": f"Bearer {config.WHATSAPP_TOKEN}",
-    "Content-Type": "application/json",
-}
+
+def _headers() -> dict[str, str]:
+    """Build auth headers at call time so token changes are picked up."""
+    return {
+        "Authorization": f"Bearer {config.WHATSAPP_TOKEN}",
+        "Content-Type": "application/json",
+    }
 
 
 async def send_text(to: str, text: str) -> None:
@@ -29,7 +32,7 @@ async def send_text(to: str, text: str) -> None:
         "text": {"preview_url": False, "body": text},
     }
     async with httpx.AsyncClient(timeout=30) as client:
-        resp = await client.post(config.WHATSAPP_API_URL, json=payload, headers=_HEADERS)
+        resp = await client.post(config.WHATSAPP_API_URL, json=payload, headers=_headers())
         if resp.status_code != 200:
             logger.error(
                 "WhatsApp send failed: %s %s", resp.status_code, resp.text

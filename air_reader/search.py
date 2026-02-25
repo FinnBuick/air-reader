@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import urlparse
 
 import httpx
 
@@ -121,7 +122,6 @@ def format_results(query: str, results: list[SearchResult]) -> str:
 
 def _domain(url: str) -> str:
     try:
-        from urllib.parse import urlparse
         return urlparse(url).netloc
     except Exception:
         return ""

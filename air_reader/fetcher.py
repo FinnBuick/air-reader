@@ -7,9 +7,12 @@ Fallback path: Playwright headless browser for JS-heavy SPAs.
 
 from __future__ import annotations
 
+import ipaddress
 import logging
+import socket
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import urlparse
 
 import trafilatura
 import trafilatura.settings
@@ -33,6 +36,56 @@ class Article:
 class FetchError(Exception):
     """Raised when an article cannot be fetched or extracted."""
 
+
+# ---------------------------------------------------------------------------
+# SSRF protection
+# ---------------------------------------------------------------------------
+
+def validate_url(url: str) -> str:
+    """
+    Validate that *url* is a safe, public HTTP(S) URL.
+
+    Raises FetchError for disallowed schemes, private/reserved IPs, and
+    link-local or loopback addresses.
+    """
+    if not url:
+        raise FetchError("Empty URL")
+
+    parsed = urlparse(url)
+
+    if parsed.scheme not in ("http", "https"):
+        raise FetchError(f"Disallowed URL scheme: {parsed.scheme!r}")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise FetchError("URL has no host")
+
+    # Resolve hostname → reject private / reserved IPs
+    if hostname in ("localhost",):
+        raise FetchError(f"URL targets private/reserved address: {hostname}")
+
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        # It's a DNS name — resolve it to check the IP
+        try:
+            resolved = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            if resolved:
+                addr = ipaddress.ip_address(resolved[0][4][0])
+            else:
+                raise FetchError(f"Cannot resolve host: {hostname}")
+        except socket.gaierror:
+            raise FetchError(f"Cannot resolve host: {hostname}")
+
+    if addr.is_private or addr.is_reserved or addr.is_loopback or addr.is_link_local:
+        raise FetchError(f"URL targets private/reserved address: {addr}")
+
+    return url
+
+
+# ---------------------------------------------------------------------------
+# Extraction helpers
+# ---------------------------------------------------------------------------
 
 def _extract(html: str, url: str) -> Optional[str]:
     return trafilatura.extract(
@@ -61,24 +114,33 @@ async def _fetch_playwright(url: str) -> str:
 
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.goto(
-            url,
-            wait_until="networkidle",
-            timeout=config.PLAYWRIGHT_TIMEOUT_MS,
-        )
-        html = await page.content()
-        await browser.close()
+        try:
+            page = await browser.new_page()
+            await page.goto(
+                url,
+                wait_until="networkidle",
+                timeout=config.PLAYWRIGHT_TIMEOUT_MS,
+            )
+            html = await page.content()
+        finally:
+            await browser.close()
     return html
 
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 async def fetch(url: str) -> Article:
     """
     Fetch and extract an article from *url*.
 
-    Check the cache first; if not cached, attempt trafilatura then Playwright.
-    Raises FetchError if extraction fails.
+    Validates the URL against SSRF, checks the cache, then attempts
+    trafilatura followed by Playwright.  Raises FetchError on failure.
     """
+    # --- SSRF guard ---
+    validate_url(url)
+
     # --- Cache hit ---
     cached = cache.get(url)
     if cached:
