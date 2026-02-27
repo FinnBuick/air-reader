@@ -12,6 +12,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright browsers (Chromium only — ~130 MB)
+# Install renamed font packages first (Debian Trixie dropped the old names)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        fonts-unifont \
+        fonts-ubuntu \
+    && rm -rf /var/lib/apt/lists/*
 RUN playwright install chromium --with-deps
 
 COPY . .
