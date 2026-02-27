@@ -30,5 +30,5 @@ env/
 *.log
 logs/
 
-# Docker volumes
-searxng/
+# Docker volumes (runtime data only — searxng/ source files are tracked)
+searxng/*.log

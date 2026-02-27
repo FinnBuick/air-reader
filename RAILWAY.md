@@ -11,7 +11,7 @@ Before you start, make sure you have:
 - A [Railway](https://railway.app) account
 - A [Meta Developer](https://developers.facebook.com) account with a WhatsApp Cloud API app
 - An [Anthropic](https://console.anthropic.com) API key
-- (Optional) A [Google Custom Search](https://programmablesearchengine.google.com) API key and Search Engine ID, if you want Google search support
+- A search backend: either deploy SearXNG (included in this repo, recommended) or a [Google Custom Search](https://programmablesearchengine.google.com) API key and Search Engine ID (limited to specific sites on the free tier)
 
 ---
 
@@ -108,7 +108,33 @@ This is the phone number that is permitted to send commands to the bot. Only mes
 
 ### 3d — Search credentials (choose one backend)
 
-**Option A — Google Custom Search** (default, easiest)
+**Option A — Self-hosted SearXNG** (recommended)
+
+The repo includes a ready-to-deploy SearXNG service in the `searxng/` directory. Deploy it as a second Railway service in the same project:
+
+1. In your Railway project, click **+ New** → **GitHub Repo**.
+2. Select the same repository.
+3. Before deploying, click **Configure** → set **Root Directory** to `searxng`.
+4. Give the service a name — use `searxng` (this becomes part of its internal URL).
+5. Under the service **Variables**, add:
+   - `SEARXNG_SECRET_KEY` — any random string, e.g. `openssl rand -hex 32`
+6. Deploy the service. Railway will build the `searxng/Dockerfile` and start SearXNG.
+
+Then in your **air-reader** service variables, set:
+- `SEARCH_BACKEND=searxng`
+- `SEARXNG_URL=http://searxng.railway.internal:8080`
+
+Railway private networking lets the two services talk to each other without going through the public internet.
+
+> **Note:** If you named the SearXNG service something other than `searxng`, replace `searxng` in the URL with that name, e.g. `http://my-searxng.railway.internal:8080`.
+
+---
+
+**Option B — Google Custom Search**
+
+> **Warning:** Google Programmable Search Engine no longer offers a free "Search the entire web" option. You must manually list up to 50 domains to search, which limits the bot's usefulness. SearXNG (Option A) is strongly recommended instead.
+
+If you still want to use Google:
 
 `GOOGLE_CSE_KEY` — a Google Cloud API key:
 1. Go to [console.cloud.google.com](https://console.cloud.google.com) and create or select a project.
@@ -117,16 +143,10 @@ This is the phone number that is permitted to send commands to the bot. Only mes
 
 `GOOGLE_CSE_CX` — a Custom Search Engine ID:
 1. Go to [programmablesearchengine.google.com](https://programmablesearchengine.google.com).
-2. Click **Add**, give the engine a name, choose **Search the entire web**, and click **Create**.
+2. Click **Add**, give the engine a name, and enter the specific sites you want to search.
 3. Open the engine, go to **Overview**, and copy the **Search engine ID**.
 
 Set `SEARCH_BACKEND=google`.
-
-**Option B — Self-hosted SearXNG** (advanced)
-
-Deploy a SearXNG instance as a second Railway service (or elsewhere), then set:
-- `SEARCH_BACKEND=searxng`
-- `SEARXNG_URL` to its internal URL, e.g. `http://searxng.railway.internal:8080`
 
 ---
 
@@ -143,10 +163,10 @@ Deploy a SearXNG instance as a second Railway service (or elsewhere), then set:
 | `WHATSAPP_APP_SECRET` | Yes | From Meta app Settings → Basic |
 | `ANTHROPIC_API_KEY` | Yes | `sk-ant-...` from Anthropic Console |
 | `ALLOWED_SENDER` | Yes | Your number, digits only, no `+` |
-| `SEARCH_BACKEND` | Yes | `google` or `searxng` |
+| `SEARCH_BACKEND` | Yes | `searxng` (recommended) or `google` |
+| `SEARXNG_URL` | If using SearXNG | `http://searxng.railway.internal:8080` |
 | `GOOGLE_CSE_KEY` | If using Google | Google Cloud API key |
 | `GOOGLE_CSE_CX` | If using Google | Custom Search Engine ID |
-| `SEARXNG_URL` | If using SearXNG | Internal URL of SearXNG service |
 | `CACHE_DB_PATH` | No | `/data/air_reader_cache.db` (if using a volume) |
 | `CACHE_TTL_SECONDS` | No | Seconds to cache pages, default `86400` (24 h) |
 
