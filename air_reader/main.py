@@ -101,6 +101,7 @@ async def receive_webhook(request: Request):
         raise HTTPException(status_code=403, detail="Invalid signature")
 
     payload: dict[str, Any] = await request.json()
+    logger.info("Webhook payload: %s", payload)
     messages = whatsapp.extract_inbound(payload)
 
     for msg in messages:
